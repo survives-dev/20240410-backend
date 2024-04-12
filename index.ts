@@ -1,11 +1,13 @@
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
-const fastify = require('fastify');
-const app = fastify({ trustProxy: true });
-const axios = require('axios');
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import fastify from 'fastify';
+import axios from 'axios';
+import dotenv from 'dotenv';
 
-require('dotenv').config();
+const app = fastify({ trustProxy: true });
+
+dotenv.config();
 
 const configJsonFile = fs.readFileSync('data/config.json', 'utf8');
 const CONFIG = JSON.parse(configJsonFile);
@@ -18,7 +20,7 @@ const ME = [
 	'/',
 	'</a>',
 ].join('');
-let privateKeyPem = process.env.PRIVATE_KEY;
+let privateKeyPem = process.env.PRIVATE_KEY ?? '';
 privateKeyPem = privateKeyPem.split('\\n').join('\n');
 if (privateKeyPem.startsWith('"')) privateKeyPem = privateKeyPem.slice(1);
 if (privateKeyPem.endsWith('"')) privateKeyPem = privateKeyPem.slice(0, -1);
@@ -29,10 +31,10 @@ app.register(require('@fastify/static'), { root: path.join(__dirname, 'public') 
 app.addContentTypeParser(
 	'application/activity+json',
 	{ parseAs: 'string' },
-	app.getDefaultJsonParser()
+	app.getDefaultJsonParser('remove', 'remove')
 );
 
-function talkScript(req) {
+function talkScript(req: string) {
 	if (new URL(req).hostname === 'localhost') return `<p>${Math.floor(Date.now() / 1000)}</p>`;
 	return [
 		'<p>',
@@ -45,18 +47,18 @@ function talkScript(req) {
 	].join('');
 }
 
-async function getActivity(req) {
+async function getActivity(req: string) {
 	const res = await axios.get(req, { headers: { Accept: 'application/activity+json' } });
 	console.log(`GET ${req} ${res.status}`);
 	return res.data;
 }
 
-async function postActivity(req, body, headers) {
+async function postActivity(req: string, body: any, headers: any) {
 	console.log(`POST ${req} ${JSON.stringify(body)}`);
 	await axios.post(req, JSON.stringify(body), { headers });
 }
 
-function signHeaders(body, strName, strHost, strInbox) {
+function signHeaders(body: any, strName: string, strHost: string, strInbox: string) {
 	const strTime = new Date().toUTCString();
 	const s256 = crypto.createHash('sha256').update(JSON.stringify(body)).digest('base64');
 	const sig = crypto
@@ -90,7 +92,7 @@ function signHeaders(body, strName, strHost, strInbox) {
 	return headers;
 }
 
-async function acceptFollow(strName, strHost, x, y) {
+async function acceptFollow(strName: string, strHost: string, x: any, y: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strInbox = x.inbox;
 	const body = {
@@ -104,7 +106,7 @@ async function acceptFollow(strName, strHost, x, y) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function follow(strName, strHost, x) {
+async function follow(strName: string, strHost: string, x: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strInbox = x.inbox;
 	const body = {
@@ -118,7 +120,7 @@ async function follow(strName, strHost, x) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function undoFollow(strName, strHost, x) {
+async function undoFollow(strName: string, strHost: string, x: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strInbox = x.inbox;
 	const body = {
@@ -137,7 +139,7 @@ async function undoFollow(strName, strHost, x) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function like(strName, strHost, x, y) {
+async function like(strName: string, strHost: string, x: any, y: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strInbox = y.inbox;
 	const body = {
@@ -151,7 +153,7 @@ async function like(strName, strHost, x, y) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function undoLike(strName, strHost, x, y) {
+async function undoLike(strName: string, strHost: string, x: any, y: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strInbox = y.inbox;
 	const body = {
@@ -170,7 +172,7 @@ async function undoLike(strName, strHost, x, y) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function announce(strName, strHost, x, y) {
+async function announce(strName: string, strHost: string, x: any, y: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strTime = new Date().toISOString().substring(0, 19) + 'Z';
 	const strInbox = y.inbox;
@@ -188,7 +190,7 @@ async function announce(strName, strHost, x, y) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function undoAnnounce(strName, strHost, x, y) {
+async function undoAnnounce(strName: string, strHost: string, x: any, y: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strInbox = y.inbox;
 	const body = {
@@ -207,7 +209,7 @@ async function undoAnnounce(strName, strHost, x, y) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function createNote(strName, strHost, x, y) {
+async function createNote(strName: string, strHost: string, x: any, y: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strTime = new Date().toISOString().substring(0, 19) + 'Z';
 	const strInbox = x.inbox;
@@ -234,7 +236,7 @@ async function createNote(strName, strHost, x, y) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function createNoteMention(strName, strHost, x, y, z) {
+async function createNoteMention(strName: string, strHost: string, x: any, y: any, z: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strTime = new Date().toISOString().substring(0, 19) + 'Z';
 	const strInbox = y.inbox;
@@ -268,7 +270,7 @@ async function createNoteMention(strName, strHost, x, y, z) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function createNoteImage(strName, strHost, x, y) {
+async function createNoteImage(strName: string, strHost: string, x: any, y: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strTime = new Date().toISOString().substring(0, 19) + 'Z';
 	const strInbox = x.inbox;
@@ -302,7 +304,7 @@ async function createNoteImage(strName, strHost, x, y) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function createNoteHashtag(strName, strHost, x, y, z) {
+async function createNoteHashtag(strName: string, strHost: string, x: any, y: any, z: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strTime = new Date().toISOString().substring(0, 19) + 'Z';
 	const strInbox = x.inbox;
@@ -335,7 +337,7 @@ async function createNoteHashtag(strName, strHost, x, y, z) {
 	await postActivity(strInbox, body, headers);
 }
 
-async function deleteNote(strName, strHost, x, y) {
+async function deleteNote(strName: string, strHost: string, x: any, y: any) {
 	const numId = Math.floor(Date.now() / 1000);
 	const strInbox = x.inbox;
 	const body = {
@@ -355,7 +357,7 @@ async function deleteNote(strName, strHost, x, y) {
 
 app.get('/', (_req, res) => res.type('text/plain; charset=utf-8').send('StrawberryFields Fastify'));
 
-app.get('/u/:strName', (req, res) => {
+app.get('/u/:strName', (req: any, res: any) => {
 	const strName = req.params.strName;
 	const strHost = req.hostname.split(':')[0];
 	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
@@ -411,8 +413,10 @@ app.get('/u/:strName', (req, res) => {
 	res.type('application/activity+json').send(body);
 });
 
-app.get('/u/:strName/inbox', async (_req, res) => res.code(405).send(new Error(res.statusCode)));
-app.post('/u/:strName/inbox', async (req, res) => {
+app.get('/u/:strName/inbox', async (_req: any, res: any) =>
+	res.code(405).send(new Error(res.statusCode))
+);
+app.post('/u/:strName/inbox', async (req: any, res: any) => {
 	const strName = req.params.strName;
 	const strHost = req.hostname.split(':')[0];
 	const y = req.body;
@@ -453,8 +457,10 @@ app.post('/u/:strName/inbox', async (req, res) => {
 	res.code(500).send(new Error(res.statusCode));
 });
 
-app.post('/u/:strName/outbox', (_req, res) => res.code(405).send(new Error(res.statusCode)));
-app.get('/u/:strName/outbox', (req, res) => {
+app.post('/u/:strName/outbox', (_req: any, res: any) =>
+	res.code(405).send(new Error(res.statusCode))
+);
+app.get('/u/:strName/outbox', (req: any, res: any) => {
 	const strName = req.params.strName;
 	const strHost = req.hostname.split(':')[0];
 	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
@@ -467,7 +473,7 @@ app.get('/u/:strName/outbox', (req, res) => {
 	res.type('application/activity+json').send(body);
 });
 
-app.get('/u/:strName/following', (req, res) => {
+app.get('/u/:strName/following', (req: any, res: any) => {
 	const strName = req.params.strName;
 	const strHost = req.hostname.split(':')[0];
 	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
@@ -480,7 +486,7 @@ app.get('/u/:strName/following', (req, res) => {
 	res.type('application/activity+json').send(body);
 });
 
-app.get('/u/:strName/followers', (req, res) => {
+app.get('/u/:strName/followers', (req: any, res: any) => {
 	const strName = req.params.strName;
 	const strHost = req.hostname.split(':')[0];
 	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
@@ -493,7 +499,7 @@ app.get('/u/:strName/followers', (req, res) => {
 	res.type('application/activity+json').send(body);
 });
 
-app.post('/s/:strSecret/u/:strName', async (req, res) => {
+app.post('/s/:strSecret/u/:strName', async (req: any, res: any) => {
 	const strName = req.params.strName;
 	const strHost = req.hostname.split(':')[0];
 	const t = req.query.type;
@@ -590,7 +596,7 @@ app.post('/s/:strSecret/u/:strName', async (req, res) => {
 	res.code(200).raw.end();
 });
 
-app.get('/.well-known/webfinger', (req, res) => {
+app.get('/.well-known/webfinger', (req: any, res: any) => {
 	const strName = CONFIG.preferredUsername;
 	const strHost = req.hostname.split(':')[0];
 	const strResource = req.query.resource;
@@ -632,13 +638,10 @@ app.get('/.well-known/webfinger', (req, res) => {
 	res.type('application/jrd+json').send(body);
 });
 
-app.get('/@', (_req, res) => res.redirect('/'));
-app.get('/u', (_req, res) => res.redirect('/'));
-app.get('/user', (_req, res) => res.redirect('/'));
-app.get('/users', (_req, res) => res.redirect('/'));
-
-app.get('/users/:strName', (req, res) => res.redirect(`/u/${req.params.strName}`));
-app.get('/user/:strName', (req, res) => res.redirect(`/u/${req.params.strName}`));
-app.get('/@:strName', (req, res) => res.redirect(`/u/${req.params.strName}`));
-
-app.listen({ port: process.env.PORT || 8080, host: process.env.HOSTS || 'localhost' });
+app.listen(3000, '0.0.0.0', function (err, address) {
+	if (err) {
+		app.log.error(err);
+		process.exit(1);
+	}
+	app.log.info(`server listening on ${address}`);
+});
