@@ -1,20 +1,19 @@
 ---
 name: Feature request
 about: Suggest an idea for this project
-title: ''
+title: '[Feature Request] '
 labels: enhancement
 assignees: ''
-
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**あなたの機能リクエストは問題に関連していますか？説明してください。**
+問題が何であるかを明確かつ簡潔に説明してください。例. いつも困るのは [...]
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**あなたが望む解決策を説明してください**
+あなたが何を起こるべきだと考えているのかを明確かつ簡潔に説明してください。
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**考慮した代替案を説明してください**
+考慮した代替解決策や機能について、明確かつ簡潔に説明してください。
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+**追加のコンテキスト**
+機能リクエストに関するその他のコンテキストやスクリーンショットをここに追加してください。
