@@ -414,7 +414,7 @@ app.get('/u/:strName', (req: FastifyRequest<{ Params: { strName: string } }>, re
 });
 
 app.get('/u/:strName/inbox', async (_req, res) =>
-	res.code(405).send(new Error(res.statusCode.toString().toString()))
+	res.code(405).send(new Error(res.statusCode.toString()))
 );
 app.post(
   '/u/:strName/inbox',
@@ -431,10 +431,10 @@ app.post(
     console.log(`INBOX ${y.id} ${y.type}`)
     if (strName !== CONFIG.preferredUsername) return res.callNotFound()
     if (!req.headers['content-type']?.includes('application/activity+json')) {
-      return res.code(400).send(new Error(res.statusCode.toString().toString()))
+      return res.code(400).send(new Error(res.statusCode.toString()))
     }
     if (!req.headers['digest'] || !req.headers['signature'])
-      return res.code(400).send(new Error(res.statusCode.toString().toString()))
+      return res.code(400).send(new Error(res.statusCode.toString()))
     if (y.type === 'Accept' || y.type === 'Reject' || y.type === 'Add')
       return res.code(200).raw.end()
     if (y.type === 'Remove' || y.type === 'Like' || y.type === 'Announce')
@@ -443,9 +443,9 @@ app.post(
       return res.code(200).raw.end()
     if (y.type === 'Follow') {
       if (new URL(y.actor || 'about:blank').protocol !== 'https:')
-        return res.code(400).send(new Error(res.statusCode.toString().toString()))
+        return res.code(400).send(new Error(res.statusCode.toString()))
       const x = await getActivity(y.actor)
-      if (!x) return res.code(500).send(new Error(res.statusCode.toString().toString()))
+      if (!x) return res.code(500).send(new Error(res.statusCode.toString()))
       await acceptFollow(strName, strHost, x, y)
       return res.code(200).raw.end()
     }
@@ -455,19 +455,19 @@ app.post(
         return res.code(200).raw.end()
       if (z.type === 'Follow') {
         if (new URL(y.actor || 'about:blank').protocol !== 'https:')
-          return res.code(400).send(new Error(res.statusCode.toString().toString()))
+          return res.code(400).send(new Error(res.statusCode.toString()))
         const x = await getActivity(y.actor)
-        if (!x) return res.code(500).send(new Error(res.statusCode.toString().toString()))
+        if (!x) return res.code(500).send(new Error(res.statusCode.toString()))
         await acceptFollow(strName, strHost, x, z)
         return res.code(200).raw.end()
       }
     }
-    res.code(500).send(new Error(res.statusCode.toString().toString()))
+    res.code(500).send(new Error(res.statusCode.toString()))
   }
 )
 
 app.post('/u/:strName/outbox', (_req, res) =>
-	res.code(405).send(new Error(res.statusCode.toString().toString()))
+	res.code(405).send(new Error(res.statusCode.toString()))
 );
 app.get(
   '/u/:strName/outbox', (req: FastifyRequest<{ Params: { strName: string } }>, res) => {
@@ -527,10 +527,10 @@ app.post(
       return res.callNotFound()
     if (req.params.strSecret !== process.env.SECRET) return res.callNotFound()
     if (new URL(req.query.id || 'about:blank').protocol !== 'https:')
-      return res.code(400).send(new Error(res.statusCode.toString().toString()))
+      return res.code(400).send(new Error(res.statusCode.toString()))
     const x = await getActivity(req.query.id)
     if (!x)
-      return res.code(500).send(new Error(res.statusCode.toString().toString()))
+      return res.code(500).send(new Error(res.statusCode.toString()))
     if (t === 'follow') {
       await follow(strName, strHost, x)
       return res.code(200).raw.end()
