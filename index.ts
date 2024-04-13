@@ -5,7 +5,7 @@ import fastify, { FastifyRequest } from 'fastify';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
-const app = fastify({ trustProxy: true });
+const app = fastify({ trustProxy: true, logger: true });
 
 dotenv.config();
 
@@ -659,8 +659,7 @@ app.get(
 		res.type('application/jrd+json').send(body);
 	}
 );
-
-app.listen(3000, '0.0.0.0', function (err, address) {
+app.listen({ port: 8000, host: '0.0.0.0' }, function (err, address) {
 	if (err) {
 		app.log.error(err);
 		process.exit(1);
