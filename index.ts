@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import fastify from 'fastify';
+import fastify, { FastifyRequest } from 'fastify';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
@@ -357,11 +357,11 @@ async function deleteNote(strName: string, strHost: string, x: any, y: any) {
 
 app.get('/', (_req, res) => res.type('text/plain; charset=utf-8').send('StrawberryFields Fastify'));
 
-app.get('/u/:strName', (req: any, res: any) => {
+app.get('/u/:strName', (req: FastifyRequest<{ Params: { strName: string } }>, res) => {
 	const strName = req.params.strName;
 	const strHost = req.hostname.split(':')[0];
 	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
-	if (!req.headers['accept'].includes('application/activity+json')) {
+	if (!req.headers.accept?.includes('application/activity+json')) {
 		return res.type('text/plain; charset=utf-8').send(`${strName}: ${CONFIG.name}`);
 	}
 	const body = {
@@ -413,80 +413,91 @@ app.get('/u/:strName', (req: any, res: any) => {
 	res.type('application/activity+json').send(body);
 });
 
-app.get('/u/:strName/inbox', async (_req: any, res: any) =>
-	res.code(405).send(new Error(res.statusCode))
+app.get('/u/:strName/inbox', async (_req, res) =>
+	res.code(405).send(new Error(res.statusCode.toString()))
 );
-app.post('/u/:strName/inbox', async (req: any, res: any) => {
-	const strName = req.params.strName;
-	const strHost = req.hostname.split(':')[0];
-	const y = req.body;
-	console.log(`INBOX ${y.id} ${y.type}`);
-	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
-	if (!req.headers['content-type'].includes('application/activity+json')) {
-		return res.code(400).send(new Error(res.statusCode));
-	}
-	if (!req.headers['digest'] || !req.headers['signature'])
-		return res.code(400).send(new Error(res.statusCode));
-	if (y.type === 'Accept' || y.type === 'Reject' || y.type === 'Add')
-		return res.code(200).raw.end();
-	if (y.type === 'Remove' || y.type === 'Like' || y.type === 'Announce')
-		return res.code(200).raw.end();
-	if (y.type === 'Create' || y.type === 'Update' || y.type === 'Delete')
-		return res.code(200).raw.end();
-	if (y.type === 'Follow') {
-		if (new URL(y.actor || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		const x = await getActivity(y.actor);
-		if (!x) return res.code(500).send(new Error(res.statusCode));
-		await acceptFollow(strName, strHost, x, y);
-		return res.code(200).raw.end();
-	}
-	if (y.type === 'Undo') {
-		const z = y.object;
-		if (z.type === 'Accept' || z.type === 'Like' || z.type === 'Announce')
-			return res.code(200).raw.end();
-		if (z.type === 'Follow') {
-			if (new URL(y.actor || 'about:blank').protocol !== 'https:')
-				return res.code(400).send(new Error(res.statusCode));
-			const x = await getActivity(y.actor);
-			if (!x) return res.code(500).send(new Error(res.statusCode));
-			await acceptFollow(strName, strHost, x, z);
-			return res.code(200).raw.end();
-		}
-	}
-	res.code(500).send(new Error(res.statusCode));
-});
+app.post(
+  '/u/:strName/inbox',
+  async (
+    req: FastifyRequest<{
+      Params: { strName: string }
+      Body: { id: string; type: string; actor: string; object: { type: string } }
+    }>,
+    res
+  ) => {
+    const strName = req.params.strName
+    const strHost = req.hostname.split(':')[0]
+    const y = req.body
+    console.log(`INBOX ${y.id} ${y.type}`)
+    if (strName !== CONFIG.preferredUsername) return res.callNotFound()
+    if (!req.headers['content-type']?.includes('application/activity+json')) {
+      return res.code(400).send(new Error(res.statusCode.toString()))
+    }
+    if (!req.headers['digest'] || !req.headers['signature'])
+      return res.code(400).send(new Error(res.statusCode.toString()))
+    if (y.type === 'Accept' || y.type === 'Reject' || y.type === 'Add')
+      return res.code(200).raw.end()
+    if (y.type === 'Remove' || y.type === 'Like' || y.type === 'Announce')
+      return res.code(200).raw.end()
+    if (y.type === 'Create' || y.type === 'Update' || y.type === 'Delete')
+      return res.code(200).raw.end()
+    if (y.type === 'Follow') {
+      if (new URL(y.actor || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      const x = await getActivity(y.actor)
+      if (!x) return res.code(500).send(new Error(res.statusCode.toString()))
+      await acceptFollow(strName, strHost, x, y)
+      return res.code(200).raw.end()
+    }
+    if (y.type === 'Undo') {
+      const z = y.object
+      if (z.type === 'Accept' || z.type === 'Like' || z.type === 'Announce')
+        return res.code(200).raw.end()
+      if (z.type === 'Follow') {
+        if (new URL(y.actor || 'about:blank').protocol !== 'https:')
+          return res.code(400).send(new Error(res.statusCode.toString()))
+        const x = await getActivity(y.actor)
+        if (!x) return res.code(500).send(new Error(res.statusCode.toString()))
+        await acceptFollow(strName, strHost, x, z)
+        return res.code(200).raw.end()
+      }
+    }
+    res.code(500).send(new Error(res.statusCode.toString()))
+  }
+)
 
-app.post('/u/:strName/outbox', (_req: any, res: any) =>
-	res.code(405).send(new Error(res.statusCode))
+app.post('/u/:strName/outbox', (_req, res) =>
+	res.code(405).send(new Error(res.statusCode.toString()))
 );
-app.get('/u/:strName/outbox', (req: any, res: any) => {
-	const strName = req.params.strName;
-	const strHost = req.hostname.split(':')[0];
-	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
-	const body = {
-		'@context': 'https://www.w3.org/ns/activitystreams',
-		id: `https://${strHost}/u/${strName}/outbox`,
-		type: 'OrderedCollection',
-		totalItems: 0,
-	};
-	res.type('application/activity+json').send(body);
-});
+app.get(
+  '/u/:strName/outbox', (req: FastifyRequest<{ Params: { strName: string } }>, res) => {
+    const strName = req.params.strName
+    const strHost = req.hostname.split(':')[0]
+    if (strName !== CONFIG.preferredUsername) return res.callNotFound()
+    const body = {
+      '@context': 'https://www.w3.org/ns/activitystreams',
+      id: `https://${strHost}/u/${strName}/outbox`,
+      type: 'OrderedCollection',
+      totalItems: 0,
+    }
+    res.type('application/activity+json').send(body)
+  }
+)
 
-app.get('/u/:strName/following', (req: any, res: any) => {
-	const strName = req.params.strName;
-	const strHost = req.hostname.split(':')[0];
-	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
-	const body = {
-		'@context': 'https://www.w3.org/ns/activitystreams',
-		id: `https://${strHost}/u/${strName}/following`,
-		type: 'OrderedCollection',
-		totalItems: 0,
-	};
-	res.type('application/activity+json').send(body);
-});
+app.get('/u/:strName/following', (req: FastifyRequest<{ Params: { strName: string } }>, res) => {
+  const strName = req.params.strName
+  const strHost = req.hostname.split(':')[0]
+  if (strName !== CONFIG.preferredUsername) return res.callNotFound()
+  const body = {
+    '@context': 'https://www.w3.org/ns/activitystreams',
+    id: `https://${strHost}/u/${strName}/following`,
+    type: 'OrderedCollection',
+    totalItems: 0,
+  }
+  res.type('application/activity+json').send(body)
+})
 
-app.get('/u/:strName/followers', (req: any, res: any) => {
+app.get('/u/:strName/followers', (req: FastifyRequest<{ Params: { strName: string } }>, res) => {
 	const strName = req.params.strName;
 	const strHost = req.hostname.split(':')[0];
 	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
@@ -499,144 +510,160 @@ app.get('/u/:strName/followers', (req: any, res: any) => {
 	res.type('application/activity+json').send(body);
 });
 
-app.post('/s/:strSecret/u/:strName', async (req: any, res: any) => {
-	const strName = req.params.strName;
-	const strHost = req.hostname.split(':')[0];
-	const t = req.query.type;
-	if (strName !== CONFIG.preferredUsername) return res.callNotFound();
-	if (!req.params.strSecret || req.params.strSecret === '-') return res.callNotFound();
-	if (req.params.strSecret !== process.env.SECRET) return res.callNotFound();
-	if (new URL(req.query.id || 'about:blank').protocol !== 'https:')
-		return res.code(400).send(new Error(res.statusCode));
-	const x = await getActivity(req.query.id);
-	if (!x) return res.code(500).send(new Error(res.statusCode));
-	if (t === 'follow') {
-		await follow(strName, strHost, x);
-		return res.code(200).raw.end();
-	}
-	if (t === 'undo_follow') {
-		await undoFollow(strName, strHost, x);
-		return res.code(200).raw.end();
-	}
-	if (t === 'like') {
-		if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		const y = await getActivity(x.attributedTo);
-		if (!y) return res.code(500).send(new Error(res.statusCode));
-		await like(strName, strHost, x, y);
-		return res.code(200).raw.end();
-	}
-	if (t === 'undo_like') {
-		if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		const y = await getActivity(x.attributedTo);
-		if (!y) return res.code(500).send(new Error(res.statusCode));
-		await undoLike(strName, strHost, x, y);
-		return res.code(200).raw.end();
-	}
-	if (t === 'announce') {
-		if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		const y = await getActivity(x.attributedTo);
-		if (!y) return res.code(500).send(new Error(res.statusCode));
-		await announce(strName, strHost, x, y);
-		return res.code(200).raw.end();
-	}
-	if (t === 'undo_announce') {
-		if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		const y = await getActivity(x.attributedTo);
-		if (!y) return res.code(500).send(new Error(res.statusCode));
-		await undoAnnounce(strName, strHost, x, y);
-		return res.code(200).raw.end();
-	}
-	if (t === 'create_note') {
-		const y = req.query.url || 'https://localhost';
-		if (new URL(y || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		await createNote(strName, strHost, x, y);
-		return res.code(200).raw.end();
-	}
-	if (t === 'create_note_image') {
-		const y = req.query.url || `https://${strHost}/public/logo.png`;
-		if (new URL(y || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		if (new URL(y || 'about:blank').hostname !== strHost)
-			return res.code(400).send(new Error(res.statusCode));
-		await createNoteImage(strName, strHost, x, y);
-		return res.code(200).raw.end();
-	}
-	if (t === 'create_note_mention') {
-		if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		const y = await getActivity(x.attributedTo);
-		if (!y) return res.code(500).send(new Error(res.statusCode));
-		const z = req.query.url || 'https://localhost';
-		if (new URL(z || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		await createNoteMention(strName, strHost, x, y, z);
-		return res.code(200).raw.end();
-	}
-	if (t === 'create_note_hashtag') {
-		const y = req.query.url || 'https://localhost';
-		if (new URL(y || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		const z = req.query.tag || 'Hashtag';
-		await createNoteHashtag(strName, strHost, x, y, z);
-		return res.code(200).raw.end();
-	}
-	if (t === 'delete_note') {
-		const y = req.query.url || `https://${strHost}/u/${strName}/s/0`;
-		if (new URL(y || 'about:blank').protocol !== 'https:')
-			return res.code(400).send(new Error(res.statusCode));
-		await deleteNote(strName, strHost, x, y);
-		return res.code(200).raw.end();
-	}
-	console.log(`TYPE ${x.id} ${x.type}`);
-	res.code(200).raw.end();
-});
+app.post(
+  '/s/:strSecret/u/:strName',
+  async (
+    req: FastifyRequest<{
+      Querystring: { type: string; id: string; url: string; tag: string }
+      Params: { strName: string; strSecret: string }
+    }>,
+    res
+  ) => {
+    const strName = req.params.strName
+    const strHost = req.hostname.split(':')[0]
+    const t = req.query.type
+    if (strName !== CONFIG.preferredUsername) return res.callNotFound()
+    if (!req.params.strSecret || req.params.strSecret === '-')
+      return res.callNotFound()
+    if (req.params.strSecret !== process.env.SECRET) return res.callNotFound()
+    if (new URL(req.query.id || 'about:blank').protocol !== 'https:')
+      return res.code(400).send(new Error(res.statusCode.toString()))
+    const x = await getActivity(req.query.id)
+    if (!x)
+      return res.code(500).send(new Error(res.statusCode.toString()))
+    if (t === 'follow') {
+      await follow(strName, strHost, x)
+      return res.code(200).raw.end()
+    }
+    if (t === 'undo_follow') {
+      await undoFollow(strName, strHost, x)
+      return res.code(200).raw.end()
+    }
+    if (t === 'like') {
+      if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      const y = await getActivity(x.attributedTo)
+      if (!y) return res.code(500).send(new Error(res.statusCode.toString()))
+      await like(strName, strHost, x, y)
+      return res.code(200).raw.end()
+    }
+    if (t === 'undo_like') {
+      if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      const y = await getActivity(x.attributedTo)
+      if (!y) return res.code(500).send(new Error(res.statusCode.toString()))
+      await undoLike(strName, strHost, x, y)
+      return res.code(200).raw.end()
+    }
+    if (t === 'announce') {
+      if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      const y = await getActivity(x.attributedTo)
+      if (!y) return res.code(500).send(new Error(res.statusCode.toString()))
+      await announce(strName, strHost, x, y)
+      return res.code(200).raw.end()
+    }
+    if (t === 'undo_announce') {
+      if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      const y = await getActivity(x.attributedTo)
+      if (!y) return res.code(500).send(new Error(res.statusCode.toString()))
+      await undoAnnounce(strName, strHost, x, y)
+      return res.code(200).raw.end()
+    }
+    if (t === 'create_note') {
+      const y = req.query.url || 'https://localhost'
+      if (new URL(y || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      await createNote(strName, strHost, x, y)
+      return res.code(200).raw.end()
+    }
+    if (t === 'create_note_image') {
+      const y = req.query.url || `https://${strHost}/public/logo.png`
+      if (new URL(y || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      if (new URL(y || 'about:blank').hostname !== strHost)
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      await createNoteImage(strName, strHost, x, y)
+      return res.code(200).raw.end()
+    }
+    if (t === 'create_note_mention') {
+      if (new URL(x.attributedTo || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      const y = await getActivity(x.attributedTo)
+      if (!y) return res.code(500).send(new Error(res.statusCode.toString()))
+      const z = req.query.url || 'https://localhost'
+      if (new URL(z || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      await createNoteMention(strName, strHost, x, y, z)
+      return res.code(200).raw.end()
+    }
+    if (t === 'create_note_hashtag') {
+      const y = req.query.url || 'https://localhost'
+      if (new URL(y || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      const z = req.query.tag || 'Hashtag'
+      await createNoteHashtag(strName, strHost, x, y, z)
+      return res.code(200).raw.end()
+    }
+    if (t === 'delete_note') {
+      const y = req.query.url || `https://${strHost}/u/${strName}/s/0`
+      if (new URL(y || 'about:blank').protocol !== 'https:')
+        return res.code(400).send(new Error(res.statusCode.toString()))
+      await deleteNote(strName, strHost, x, y)
+      return res.code(200).raw.end()
+    }
+    console.log(`TYPE ${x.id} ${x.type}`)
+    res.code(200).raw.end()
+  }
+)
 
-app.get('/.well-known/webfinger', (req: any, res: any) => {
-	const strName = CONFIG.preferredUsername;
-	const strHost = req.hostname.split(':')[0];
-	const strResource = req.query.resource;
-	let boolResource = false;
-	if (strResource === `acct:${strName}@${strHost}`) boolResource = true;
-	if (strResource === `mailto:${strName}@${strHost}`) boolResource = true;
-	if (strResource === `https://${strHost}/@${strName}`) boolResource = true;
-	if (strResource === `https://${strHost}/u/${strName}`) boolResource = true;
-	if (strResource === `https://${strHost}/user/${strName}`) boolResource = true;
-	if (strResource === `https://${strHost}/users/${strName}`) boolResource = true;
-	if (!boolResource) return res.callNotFound();
-	const body = {
-		subject: `acct:${strName}@${strHost}`,
-		aliases: [
-			`mailto:${strName}@${strHost}`,
-			`https://${strHost}/@${strName}`,
-			`https://${strHost}/u/${strName}`,
-			`https://${strHost}/user/${strName}`,
-			`https://${strHost}/users/${strName}`,
-		],
-		links: [
-			{
-				rel: 'self',
-				type: 'application/activity+json',
-				href: `https://${strHost}/u/${strName}`,
-			},
-			{
-				rel: 'http://webfinger.net/rel/avatar',
-				type: 'image/png',
-				href: `https://${strHost}/public/${strName}u.png`,
-			},
-			{
-				rel: 'http://webfinger.net/rel/profile-page',
-				type: 'text/plain',
-				href: `https://${strHost}/u/${strName}`,
-			},
-		],
-	};
-	res.type('application/jrd+json').send(body);
-});
+app.get(
+  '/.well-known/webfinger',
+  (req: FastifyRequest<{ Querystring: { resource: string } }>, res: any) => {
+    const strName = CONFIG.preferredUsername
+    const strHost = req.hostname.split(':')[0]
+    const strResource = req.query.resource
+    let boolResource = false
+    if (strResource === `acct:${strName}@${strHost}`) boolResource = true
+    if (strResource === `mailto:${strName}@${strHost}`) boolResource = true
+    if (strResource === `https://${strHost}/@${strName}`) boolResource = true
+    if (strResource === `https://${strHost}/u/${strName}`) boolResource = true
+    if (strResource === `https://${strHost}/user/${strName}`)
+      boolResource = true
+    if (strResource === `https://${strHost}/users/${strName}`)
+      boolResource = true
+    if (!boolResource) return res.callNotFound()
+    const body = {
+      subject: `acct:${strName}@${strHost}`,
+      aliases: [
+        `mailto:${strName}@${strHost}`,
+        `https://${strHost}/@${strName}`,
+        `https://${strHost}/u/${strName}`,
+        `https://${strHost}/user/${strName}`,
+        `https://${strHost}/users/${strName}`,
+      ],
+      links: [
+        {
+          rel: 'self',
+          type: 'application/activity+json',
+          href: `https://${strHost}/u/${strName}`,
+        },
+        {
+          rel: 'http://webfinger.net/rel/avatar',
+          type: 'image/png',
+          href: `https://${strHost}/public/${strName}u.png`,
+        },
+        {
+          rel: 'http://webfinger.net/rel/profile-page',
+          type: 'text/plain',
+          href: `https://${strHost}/u/${strName}`,
+        },
+      ],
+    }
+    res.type('application/jrd+json').send(body)
+  }
+)
 
 app.listen(3000, '0.0.0.0', function (err, address) {
 	if (err) {
