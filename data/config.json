@@ -1,3 +1,7 @@
 {
-	"me": "http://localhost:8000"
+	"origin": "http://0.0.0.0:8000",
+	"preferredUsername": "a",
+	"name": "Alice",
+	"me": "http://0.0.0.0:8000",
+	"maxAge": 86400
 }
