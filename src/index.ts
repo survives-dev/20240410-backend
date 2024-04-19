@@ -20,7 +20,6 @@ const ME = [
 	'/',
 	'</a>',
 ].join('');
-// https://cryptotools.net/rsagen ← Please use this for the test environment for now.
 let privateKeyPem = process.env.PRIVATE_KEY ?? '';
 privateKeyPem = privateKeyPem.split('\\n').join('\n');
 if (privateKeyPem.startsWith('"')) privateKeyPem = privateKeyPem.slice(1);
@@ -659,7 +658,7 @@ app.get(
 		res.type('application/jrd+json').send(body);
 	}
 );
-app.listen({ port: 8000, host: '0.0.0.0' }, function (err, address) {
+app.listen({ port: 8080, host: '0.0.0.0' }, function (err, address) {
 	if (err) {
 		app.log.error(err);
 		process.exit(1);
