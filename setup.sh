@@ -38,3 +38,5 @@ else
   touch id_rsa id_rsa.pub
 fi
 echo "PRIVATE_KEY=\"$(cat id_rsa | tr '\n' '\r')\"" >> .env
+
+docker run --init -d -v "$PWD/data:/workspace/data" -p "${PORT:-8080}:${PORT:-8080}" -e PORT --env-file=.env --name=strawberryfields-fastify strawberryfields-fastify
