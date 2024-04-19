@@ -37,4 +37,4 @@ elif command -v ssh-keygen >/dev/null; then
 else
   touch id_rsa id_rsa.pub
 fi
-echo "PRIVATE_KEY=\"$(cat id_rsa | tr '\n' '\\\\')\"" >> .env
+echo "PRIVATE_KEY=\"$(cat id_rsa | tr '\n' '\r')\"" >> .env
