@@ -1,7 +1,7 @@
 version: '3'
 services:
   app:
-    image: 20240410-backend
+    image: strawberryfields-fastify
     init: true
     volumes:
       - ./data:/workspace/data
